@@ -54,7 +54,7 @@ export async function getPlayerByCOCTag(prevState: any,playerTagData: string) {
     const cocPlayerData: COCPlayer = mapApiToCOCPlayerModel(data);
     await db.collection<COCPlayer>('cocPlayers').updateOne({ _id: playerTagData }, { $set: cocPlayerData }, { upsert: true });
 
-    return { data: cocPlayerData, error: null, status: response.status };
+    return { data: cocPlayerData, tag: playerTagData, error: null, status: response.status };
 
   } catch (err) {
     return { error: 'An error occurred while fetching player data', details: err };
@@ -72,7 +72,7 @@ export async function getPlayerCRData(prevState: any,formData: FormData){
 
   // If player data is found in the database and is less than 24 hours old, return it. Otherwise, fetch new data from the API
   if (playerData && playerData?.lastUpdated && (Date.now() - playerData.lastUpdated.getTime()) < 24 * 60 * 60 * 1000) {
-    return { data: playerData, error: null, status: 200 };
+    return { data: playerData, tag: playerTagData, error: null, status: 200 };
   } else {
     return getPlayerByCRTag(prevState, playerTagData);
   }
@@ -99,7 +99,7 @@ export async function getPlayerByCRTag(prevState: any,playerTagData: string) {
     // Store the fetched data in the database with a timestamp, update & insert = upsert
     const crPlayerData: CRPlayer = mapApiToCRPlayerModel(data);
     await db.collection<CRPlayer>('crPlayers').updateOne({ _id: playerTagData }, { $set: crPlayerData }, { upsert: true });
-    return { data: crPlayerData, error: null, status: response.status };
+    return { data: crPlayerData, tag: playerTagData, error: null, status: response.status };
   } catch (err) {
     return { error: 'An error occurred while fetching player data', details: err };
   }
@@ -134,7 +134,7 @@ export async function getPUUIDBySummonerNameTag(prevState: any,playerNameTagData
     return { error: 'An error occurred while fetching PUUIDBySummonerName', details: err };
   }
 }
-export async function getPlayerLoLData(prevState: any,formData: FormData) {
+export async function getPlayerRankedLoLData(prevState: any,formData: FormData) {
   const playerNameTagData = formData.get('playerTag') as string;
 
   // Retrieve the PUUID using the summoner name and tag
@@ -150,9 +150,11 @@ export async function getPlayerLoLData(prevState: any,formData: FormData) {
   const playerData = await db.collection<LoLPlayer>('lolPlayers').findOne({ _id: playerPUUID });
   // If player data is found in the database and is less than 24 hours old, return it. Otherwise, fetch new data from the API
   if (playerData && playerData?.lastUpdated && (Date.now() - playerData.lastUpdated.getTime()) < 24 * 60 * 60 * 1000) {
-    return { data: playerData, error: null, status: 200 };
-  } 
-
+    return { data: playerData, tag: playerNameTagData, error: null, status: 200 };
+  }
+ 
+  console.log('https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/' + playerPUUID);
+  
   try {
     const response = await fetch('https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/' + playerPUUID, {
       headers: {
@@ -165,10 +167,15 @@ export async function getPlayerLoLData(prevState: any,formData: FormData) {
       return { error: 'Failed to fetch player data', data:data, status: response.status };
     }
 
+    //Check if data array is empty, this means the player hasn't played any ranked games recently
+    if (!data || data.length == 0) {
+      return { error: 'Player has not played any ranked games recently', data: null, status: 404 };
+    }
+
     // Store the fetched data in the database with a timestamp, update & insert = upsert
     const lolPlayerData: LoLPlayer = mapApiToLoLPlayerModel(data[0]);
     await db.collection<LoLPlayer>('lolPlayers').updateOne({ _id: playerPUUID }, { $set: lolPlayerData }, { upsert: true });
-    return { data: lolPlayerData, error: null, status: response.status };
+    return { data: lolPlayerData, tag: playerNameTagData,error: null, status: response.status };
   } catch (err) {
     return { error: 'An error occurred while fetching PlayerLoLData', details: err };
   }

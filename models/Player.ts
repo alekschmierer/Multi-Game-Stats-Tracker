@@ -1,6 +1,7 @@
 export interface COCPlayer {
   _id: string;
   name: string;
+  townHallLevel: number;
   trophies: number;
   leagueTier: string;
   builderBaseTrophies: number;
@@ -14,6 +15,7 @@ export function mapApiToCOCPlayerModel(apiData: any): COCPlayer {
   return {
     _id: apiData.tag || '',
     name: apiData.name || '',
+    townHallLevel: apiData.townHallLevel || 0,
     trophies: apiData.trophies || 0,
     leagueTier: apiData.leagueTier?.name || '',
     builderBaseTrophies: apiData.builderBaseTrophies || 0,

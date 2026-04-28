@@ -18,6 +18,7 @@ export default function GameForm({
         <input
           name={name}
           type="text"
+          defaultValue={state?.tag || ""}
           placeholder={placeholder}
           className="border p-2 rounded w-full"
         />
@@ -28,13 +29,6 @@ export default function GameForm({
           <p>Error: {state.error}</p>
         </div>
       )}
-
-      {state?.data && (
-        <pre className="bg-black/10 p-2 rounded">
-          {JSON.stringify(state.data, null, 2)}
-        </pre>
-      )}
-
     </div>
   );
 }
