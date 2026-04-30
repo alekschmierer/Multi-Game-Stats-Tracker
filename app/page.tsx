@@ -26,10 +26,17 @@ export default function Home() {
   const [lolState, lolFormAction] = useActionState(getPlayerRankedLoLData, null);
   const [activeTab, setActiveTab] = useState("lobby");
 
+  const [crScore, setCrScore] = useState<number | null>(null);
+
   const [expanded, setExpanded] = useState<Record<ExpandKey, boolean>>({
     me: false,
     player1: false,
   });
+
+  const myAccountHasData =
+  !!cocState?.data ||
+  !!crState?.data ||
+  !!lolState?.data;
 
   type ExpandKey = "me" | "player1";
   function toggle(key: ExpandKey) {
@@ -58,7 +65,7 @@ export default function Home() {
 
       {/* Lobby */}
       {activeTab === "lobby" && (
-        <div className="max-w-6xl mx-auto px-4 w-full"> {/* Container to add side room */}
+        <div className="max-w-6xl mx-auto px-4 w-full">
           <div className="border border-border/60 rounded-lg overflow-hidden">
             <button
               onClick={() => toggle("me")}
@@ -86,6 +93,7 @@ export default function Home() {
 
             {expanded.me && (
               <div className="flex flex-col lg:flex-row p-6 border-t border-border gap-6 items-stretch">
+
                 {/* User and Forms */}
                 <div className="w-full lg:w-72 shrink-0">
                   <div className="h-full space-y-4 p-4 border border-border rounded-xl bg-card/50 flex flex-col">
@@ -116,26 +124,35 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Data Cards */}
-                <div className="flex-1 min-w-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 h-full items-stretch">
-                    {cocState?.data && (
-                      <div className="flex flex-col h-full space-y-1">
-                        <StatCard title="Clash of Clans" data={cocState.data} type="coc" />
-                      </div>
-                    )}
-                    {crState?.data && (
-                      <div className="flex flex-col h-full space-y-1">
-                        <StatCard title="Clash Royale" data={crState.data} type="cr" />
-                      </div>
-                    )}
-                    {lolState?.data && (
-                      <div className="flex flex-col h-full space-y-1">
-                        <StatCard title="League of Legends" data={lolState.data} type="lol" />
-                      </div>
-                    )}
+                {!(myAccountHasData) && (
+                  <div className="w-full p-6 border border-border rounded-xl text-center opacity-60">
+                    Waiting for player data...
                   </div>
-                </div>
+                )}
+
+                {/* Data Cards */}
+                {myAccountHasData && (
+                  <div className="flex-1 min-w-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 h-full items-stretch">
+                      {cocState?.data && (
+                        <div className="flex flex-col h-full space-y-1">
+                          <StatCard title="Clash of Clans" data={cocState.data} type="coc" />
+                        </div>
+                      )}
+                      {/*HERE*/}
+                      {crState?.data && (
+                        <div className="flex flex-col h-full space-y-1">
+                          <StatCard title="Clash Royale" data={crState.data} type="cr" />
+                        </div>
+                      )}
+                      {lolState?.data && (
+                        <div className="flex flex-col h-full space-y-1">
+                          <StatCard title="League of Legends" data={lolState.data} type="lol" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

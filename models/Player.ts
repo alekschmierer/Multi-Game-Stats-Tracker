@@ -34,6 +34,7 @@ export interface CRPlayer {
   losses: number;
   battleCount: number;
   threeCrownWins: number;
+  currentPathOfLegendSeasonResult: number;
   lastUpdated: Date;
 }
 
@@ -46,6 +47,7 @@ export function mapApiToCRPlayerModel(apiData: any): CRPlayer {
     losses: apiData.losses || 0,
     battleCount: apiData.battleCount || 0,
     threeCrownWins: apiData.threeCrownWins || 0,
+    currentPathOfLegendSeasonResult : apiData.currentPathOfLegendSeasonResult || 1,
     lastUpdated: new Date(),
   };
 }
