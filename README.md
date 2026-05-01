@@ -10,3 +10,5 @@ Light Styling + Stat Cards Added
 Arbitrary Scoring System (Improvements: Query Leaderboard endpoints, Issues: May not have access to direct leaderboard data)
 <img width="1915" height="938" alt="godgamer_4" src="https://github.com/user-attachments/assets/e038a903-c230-45d3-8c3d-5f82a0ffdcb1" />
 
+Add Friend Button and Reusable Form Component For My Account and Add Friend Component
+<img width="1910" height="937" alt="image" src="https://github.com/user-attachments/assets/5b59abe5-bd4f-40e8-8bea-8fbe14d09225" />
