@@ -1,6 +1,6 @@
 "use client";
 
-export default function GameForm({
+export default function GameNameForm({
   action,
   state,
   placeholder,
