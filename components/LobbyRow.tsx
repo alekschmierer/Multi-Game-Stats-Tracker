@@ -1,21 +1,24 @@
 "use client";
-import { useState, useActionState } from "react";
+import { useState, useActionState, useEffect, useRef } from "react";
 import { getPlayerCOCData, getPlayerCRData, getPlayerRankedLoLData } from "../lib/actions";
 import DataFormPanel from "./DataFormPanel";
 import StatCard from "./StatCard";
 
 interface LobbyRowProps {
+  id?: string;
   displayName: string;
   data?: { 
     coc?: any; 
     cr?: any; 
     lol?: any 
   };
+  onUpdate?: (id: string, newName: string, newData: any) => void;
 }
 
-export default function LobbyRow({ displayName, data }: LobbyRowProps) {
+export default function LobbyRow({ id = "", displayName, data, onUpdate }: LobbyRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localName, setLocalName] = useState(displayName);
+  const isFirstRender = useRef(true);
 
   const [cocState, cocFormAction] = useActionState(
     getPlayerCOCData, 
@@ -29,6 +32,21 @@ export default function LobbyRow({ displayName, data }: LobbyRowProps) {
     getPlayerRankedLoLData, 
     data?.lol ? { data: data.lol, error: null } : (null as any)
   );
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (onUpdate) {
+      onUpdate(id, localName, {
+        coc: cocState?.data,
+        cr: crState?.data,
+        lol: lolState?.data
+      });
+    }
+  }, [localName, cocState, crState, lolState, id, onUpdate]);
 
   const hasData = !!cocState?.data || !!crState?.data || !!lolState?.data;
   return (
