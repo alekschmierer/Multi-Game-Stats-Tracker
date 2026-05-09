@@ -13,5 +13,5 @@ Arbitrary Scoring System (Improvements: Query Leaderboard endpoints, Issues: May
 Add Friend Button and Reusable Form Component For My Account and Add Friend Component
 <img width="1910" height="937" alt="image" src="https://github.com/user-attachments/assets/5b59abe5-bd4f-40e8-8bea-8fbe14d09225" />
 
-Added Leader Board
+Added Leaderboard
 <img width="1913" height="932" alt="image" src="https://github.com/user-attachments/assets/3f7c3547-d5a7-46c5-b39e-196d575737b2" />
