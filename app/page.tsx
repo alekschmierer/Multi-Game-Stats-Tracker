@@ -14,6 +14,7 @@ const [state (return value from the action), formAction (function you pass), isP
 import { getGameScore } from "@/lib/getGameScore";
 import { useState, useCallback } from "react";
 import { getPlayerRankedLoLData, getPlayerByCOCTag, getPlayerByCRTag } from "../lib/actions";
+import { PlayerData, LobbyPlayer } from "@/interfaces/interface";
 import LobbyRow from "@/components/LobbyRow";
 
 
@@ -43,17 +44,7 @@ export default function Home() {
     }));
   }
 
-  // 
-  interface PlayerData {
-    coc: any;
-    cr: any;
-    lol: any;
-  }
-  interface LobbyPlayer {
-    id: string;
-    displayName: string;
-    data: PlayerData;
-  }
+
   const [lobbyList, setLobbyList] = useState<LobbyPlayer[]>([]);
 
   const addNewPlayer = async () => {
@@ -63,7 +54,7 @@ export default function Home() {
     const friendData: PlayerData = { coc: null, cr: null, lol: null };
 
     if (friendCocTag.trim()) {
-      const res = await getPlayerByCOCTag(null, friendCocTag.trim());
+      const res = await getPlayerByCOCTag(friendCocTag.trim());
       friendData.coc = res?.data;
     }
     if (friendCrTag.trim()) {
@@ -111,7 +102,7 @@ export default function Home() {
         (getGameScore("lol", player.data?.lol) || 0) +
         (getGameScore("cr", player.data?.cr) || 0) +
         (getGameScore("coc", player.data?.coc) || 0);
-
+      
       return {
         ...player,
         score,

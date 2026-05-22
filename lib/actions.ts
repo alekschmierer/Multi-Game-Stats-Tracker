@@ -2,6 +2,7 @@
 
 import clientPromise from "@/lib/mongodb";
 import { COCPlayer, mapApiToCOCPlayerModel, CRPlayer, mapApiToCRPlayerModel, LoLPlayer, mapApiToLoLPlayerModel} from "@/models/Player";
+import { redis } from "./redis";
 
 // MongoDb Uses Collections, similar to Tables, _id is the primary key field 
 // await db.collection("players")
@@ -17,25 +18,27 @@ const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 export async function getPlayerCOCData(prevState: any,formData: FormData){
   const playerTagData = formData.get('playerTag') as string;
-
-  // Wait for clientPromise to resolve and get the database instance
-  const client = await clientPromise;
-  const db = client.db("friend-stat-tracker");
-
-  const playerData = await db.collection<COCPlayer>('players').findOne({ _id: playerTagData });
-
-  // If player data is found in the database and is less than 24 hours old, return it. Otherwise, fetch new data from the API
-  if (playerData && playerData?.lastUpdated && (Date.now() - playerData.lastUpdated.getTime()) < 24 * 60 * 60 * 1000) {
-    return { data: playerData, error: null, status: 200 };
-  } else {
-    return getPlayerByCOCTag(prevState, playerTagData);
-  }
+  return getPlayerByCOCTag(playerTagData);
 }
-export async function getPlayerByCOCTag(prevState: any,playerTagData: string) {
+export async function getPlayerByCOCTag(playerTagData: string) {
+  console.time("getPlayer");
+  const cachekey = `cocPlayer:${playerTagData}`;
+  const cachedData = await redis.get(cachekey);
+
+  if (cachedData) {
+    console.timeEnd("getPlayer");
+    return { data: JSON.parse(cachedData), error: null, status: 200 };
+  }
 
   // Wait for clientPromise to resolve and get the database instance
   const client = await clientPromise;
   const db = client.db("friend-stat-tracker");
+
+  const playerData = await db.collection<COCPlayer>('cocPlayers').findOne({ _id: playerTagData });
+  if (playerData && playerData?.lastUpdated && (Date.now() - playerData.lastUpdated.getTime()) < 24 * 60 * 60 * 1000) {
+    await redis.set(cachekey, JSON.stringify(playerData), { EX: 60 * 60 }); // Cache for 1 hour
+    return { data: playerData, error: null, status: 200 };
+  } 
 
   // %23 is the URL encoded value for #, which is required for the API call to work
   const encodedplayerTagData = encodeURIComponent(playerTagData)
@@ -53,7 +56,8 @@ export async function getPlayerByCOCTag(prevState: any,playerTagData: string) {
     // Store the fetched data in the database with a timestamp, update & insert = upsert
     const cocPlayerData: COCPlayer = mapApiToCOCPlayerModel(data);
     await db.collection<COCPlayer>('cocPlayers').updateOne({ _id: playerTagData }, { $set: cocPlayerData }, { upsert: true });
-
+    await redis.set(cachekey, JSON.stringify(cocPlayerData), { EX: 60 * 60 });
+    console.timeEnd("getPlayer");
     return { data: cocPlayerData, tag: playerTagData, error: null, status: response.status };
 
   } catch (err) {
@@ -152,8 +156,6 @@ export async function getPlayerRankedLoLData(prevState: any,formData: FormData) 
   if (playerData && playerData?.lastUpdated && (Date.now() - playerData.lastUpdated.getTime()) < 24 * 60 * 60 * 1000) {
     return { data: playerData, tag: playerNameTagData, error: null, status: 200 };
   }
- 
-  console.log('https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/' + playerPUUID);
   
   try {
     const response = await fetch('https://na1.api.riotgames.com/lol/league/v4/entries/by-puuid/' + playerPUUID, {
