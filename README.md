@@ -15,3 +15,6 @@ Add Friend Button and Reusable Form Component For My Account and Add Friend Comp
 
 Added Leaderboard
 <img width="1913" height="932" alt="image" src="https://github.com/user-attachments/assets/3f7c3547-d5a7-46c5-b39e-196d575737b2" />
+
+Added Exploratory Charts
+<img width="2550" height="1279" alt="charts" src="https://github.com/user-attachments/assets/9d325562-3907-47b9-97c7-51d9efd2e256" />
