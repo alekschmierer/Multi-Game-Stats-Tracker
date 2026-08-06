@@ -16,6 +16,7 @@ import { useState, useCallback } from "react";
 import { getPlayerRankedLoLData, getPlayerByCOCTag, getPlayerByCRTag } from "../lib/actions";
 import { PlayerData, LobbyPlayer } from "@/interfaces/interface";
 import LobbyRow from "@/components/LobbyRow";
+import ChartsPanel from "@/components/charts/ChartsPanel";
 
 
 export default function Home() {
@@ -286,11 +287,7 @@ export default function Home() {
       )}
 
       {/* Charts */}
-      {activeTab === "charts" && (
-        <div className="flex flex-col items-center space-y-3">
-          <p>No charts yet, add a player to the lobby.</p>
-        </div>
-      )}
+      {activeTab === "charts" && <ChartsPanel allPlayers={allPlayers} />}
     </main>
   );
 }
