@@ -125,6 +125,10 @@ export default function Home() {
     setLobbyList(prev => prev.map(p => p.id === id ? { ...p, displayName: name, data } : p));
   }, []);
 
+  const handleRemoveFriend = useCallback((id: string) => {
+    setLobbyList(prev => prev.filter(p => p.id !== id));
+  }, []);
+
   const allPlayers = [
     myAccount,
     ...lobbyList
@@ -293,6 +297,7 @@ export default function Home() {
                   displayName={player.displayName}
                   data={player.data}
                   onUpdate={handleUpdateFriend}
+                  onRemove={handleRemoveFriend}
                 />
               </ErrorBoundary>
             ))}
