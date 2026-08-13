@@ -17,6 +17,7 @@ import { getPlayerRankedLoLData, getPlayerByCOCTag, getPlayerByCRTag } from "../
 import { PlayerData, LobbyPlayer } from "@/interfaces/interface";
 import LobbyRow from "@/components/LobbyRow";
 import ChartsPanel from "@/components/charts/ChartsPanel";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
   const [friendCrTag, setFriendCrTag] = useState("");
   const [friendLolTag, setFriendLolTag] = useState("");
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [addFriendErrors, setAddFriendErrors] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("lobby");
 
   const [friendPopUp, setFriendPopUp] = useState(false);
@@ -48,40 +50,71 @@ export default function Home() {
 
   const [lobbyList, setLobbyList] = useState<LobbyPlayer[]>([]);
 
+  // Some IDs are generated in contexts where crypto.randomUUID isn't available.
+  const newId = () => {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return `player-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+  };
+
   const addNewPlayer = async () => {
     if (!friendName.trim()) return;
     setIsAddingFriend(true);
+    setAddFriendErrors([]);
 
     const friendData: PlayerData = { coc: null, cr: null, lol: null };
+    const problems: string[] = [];
 
-    if (friendCocTag.trim()) {
-      const res = await getPlayerByCOCTag(friendCocTag.trim());
-      friendData.coc = res?.data;
-    }
-    if (friendCrTag.trim()) {
-      const res = await getPlayerByCRTag(null, friendCrTag.trim());
-      friendData.cr = res?.data;
-    }
-    if (friendLolTag.trim()) {
-      const fd = new FormData();
-      fd.append('playerTag', friendLolTag.trim());
-      const res = await getPlayerRankedLoLData(null, fd);
-      friendData.lol = res?.data;
-    }
+    try {
+      // One game failing shouldn't stop the other two from loading, so each
+      // lookup records its error and the player still gets added with whatever
+      // came back.
+      if (friendCocTag.trim()) {
+        const res = await getPlayerByCOCTag(friendCocTag.trim());
+        friendData.coc = res?.data ?? null;
+        if (res?.error) problems.push(res.error);
+      }
+      if (friendCrTag.trim()) {
+        const res = await getPlayerByCRTag(null, friendCrTag.trim());
+        friendData.cr = res?.data ?? null;
+        if (res?.error) problems.push(res.error);
+      }
+      if (friendLolTag.trim()) {
+        const fd = new FormData();
+        fd.append('playerTag', friendLolTag.trim());
+        const res = await getPlayerRankedLoLData(null, fd);
+        friendData.lol = res?.data ?? null;
+        if (res?.error) problems.push(res.error);
+      }
 
-    const newEntry = {
-      id: crypto.randomUUID(),
-      displayName: friendName,
-      data: friendData,
-    };
+      const newEntry = {
+        id: newId(),
+        displayName: friendName,
+        data: friendData,
+      };
 
-    setLobbyList((prevList) => [...prevList, newEntry]);
-    setFriendName("");
-    setFriendCocTag("");
-    setFriendCrTag("");
-    setFriendLolTag("");
-    setFriendPopUp(false);
-    setIsAddingFriend(false);
+      setLobbyList((prevList) => [...prevList, newEntry]);
+      setAddFriendErrors(problems);
+
+      // Keep the modal open when something went wrong so the message is readable.
+      if (problems.length === 0) {
+        setFriendName("");
+        setFriendCocTag("");
+        setFriendCrTag("");
+        setFriendLolTag("");
+        setFriendPopUp(false);
+      }
+    } catch (err: any) {
+      // The actions return errors rather than throwing, so reaching here means
+      // something unexpected happened - still no crash, just a message.
+      console.error("Adding a friend failed:", err);
+      setAddFriendErrors([err?.message ?? "Could not add that player."]);
+    } finally {
+      // Always runs, so the button can never stay stuck on "Loading Match Data...".
+      setIsAddingFriend(false);
+    }
   };
 
   const handleUpdateMyAccount = useCallback((_: string, name: string, data: any) => {
@@ -217,6 +250,15 @@ export default function Home() {
                       </div>
                     </div>
 
+                    {/* Whatever the lookups couldn't fetch, said plainly */}
+                    {addFriendErrors.length > 0 && (
+                      <div className="w-full p-3 border border-red-500/40 bg-red-500/10 rounded-lg text-xs space-y-1">
+                        {addFriendErrors.map((message, i) => (
+                          <p key={i} className="break-words">{message}</p>
+                        ))}
+                      </div>
+                    )}
+
                     {/*Adds friend to lobby*/}
                     <button
                       onClick={addNewPlayer}
@@ -234,21 +276,25 @@ export default function Home() {
           )}
 
           {/*Logic For Displaying Each Player Row and their Account Data*/}
-          <LobbyRow
-            id="me"
-            displayName={myAccount.displayName}
-            data={myAccount.data}
-            onUpdate={handleUpdateMyAccount}
-          />
+          {/* Boundaries are per row so one unreadable account can't blank the lobby */}
+          <ErrorBoundary label="Your account">
+            <LobbyRow
+              id="me"
+              displayName={myAccount.displayName}
+              data={myAccount.data}
+              onUpdate={handleUpdateMyAccount}
+            />
+          </ErrorBoundary>
           <div className="space-y-4">
             {lobbyList.map((player) => (
-              <LobbyRow
-                key={player.id}
-                id={player.id}
-                displayName={player.displayName}
-                data={player.data}
-                onUpdate={handleUpdateFriend}
-              />
+              <ErrorBoundary key={player.id} label={player.displayName || "This player"}>
+                <LobbyRow
+                  id={player.id}
+                  displayName={player.displayName}
+                  data={player.data}
+                  onUpdate={handleUpdateFriend}
+                />
+              </ErrorBoundary>
             ))}
           </div>
         </div>
@@ -256,13 +302,14 @@ export default function Home() {
 
       {/* God Gamer Leaderboard */}
       {activeTab === "godgamer" && (
+        <ErrorBoundary label="The leaderboard">
         <div className="flex flex-col items-center space-y-3">
           {leaderboard.length === 0 ? (
             <p>No players on the leaderboard yet, add a player to the lobby.</p>
           ) : (
             leaderboard.map((player, index) => (
               <div
-                key={player.displayName}
+                key={`${player.displayName}-${index}`}
                 className="flex items-center justify-between p-4 rounded-lg border border-border bg-background w-full max-w-2xl"
               >
                 <div className="flex items-center gap-4">
@@ -284,10 +331,15 @@ export default function Home() {
             ))
           )}
         </div>
+        </ErrorBoundary>
       )}
 
       {/* Charts */}
-      {activeTab === "charts" && <ChartsPanel allPlayers={allPlayers} />}
+      {activeTab === "charts" && (
+        <ErrorBoundary label="The charts">
+          <ChartsPanel allPlayers={allPlayers} />
+        </ErrorBoundary>
+      )}
     </main>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { getGameScore } from "@/lib/getGameScore";
+import { isRecord, ratio, str } from "@/lib/safe";
 
 type CardProps = {
     title: string;
@@ -7,8 +8,29 @@ type CardProps = {
     type: 'lol' | 'coc' | 'cr';
 };
 
+// League names come through as "Legend League III" and we only want the tier part.
+// Anything that isn't a string (missing field, or the raw { id, name } object)
+// renders as a dash instead of throwing on .replace().
+function leagueLabel(value: unknown): string {
+    const text = str(value).replace("League", "").trim();
+    return text || "—";
+}
+
+function winRateLabel(data: any): string {
+    const rate = ratio(data?.wins, data?.losses);
+    return rate === null ? "—" : `${Math.round(rate * 100)}%`;
+}
+
+function statValue(value: unknown): string | number {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    const text = str(value);
+    return text || "—";
+}
+
 export default function StatCard({ title, data, type}: CardProps) {
     const score = getGameScore(type, data);
+    const hasData = isRecord(data);
+
     return (
         <div className="h-full flex-1 border border-border rounded-xl p-5 bg-card shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center w-full mb-4">
@@ -22,31 +44,34 @@ export default function StatCard({ title, data, type}: CardProps) {
             </div>
 
             <div className="space-y-3">
-                {type === 'coc' && (
+                {!hasData && (
+                    <p className="text-sm text-muted-foreground">No data for this account yet.</p>
+                )}
+                {hasData && type === 'coc' && (
                     <>
-                        <StatRow label="Town Hall Level" value={data.townHallLevel} />
-                        <StatRow label="Trophies" value={data.trophies} />
-                        <StatRow label="League Tier" value={data.leagueTier.replace("League", "")} />
-                        <StatRow label="War Stars" value={data.warStars} />
-                        <StatRow label="Clan Capital Contributions" value={data.clanCapitalContributions} />
-                        <StatRow label="Builder Base League" value={data.builderBaseLeague.replace("League", "")} />
-                        <StatRow label="Builder Base Trophies" value={data.builderBaseTrophies} />
+                        <StatRow label="Town Hall Level" value={statValue(data.townHallLevel)} />
+                        <StatRow label="Trophies" value={statValue(data.trophies)} />
+                        <StatRow label="League Tier" value={leagueLabel(data.leagueTier)} />
+                        <StatRow label="War Stars" value={statValue(data.warStars)} />
+                        <StatRow label="Clan Capital Contributions" value={statValue(data.clanCapitalContributions)} />
+                        <StatRow label="Builder Base League" value={leagueLabel(data.builderBaseLeague)} />
+                        <StatRow label="Builder Base Trophies" value={statValue(data.builderBaseTrophies)} />
                     </>
                 )}
-                {type === 'cr' && (
+                {hasData && type === 'cr' && (
                     <>
-                        <StatRow label="Trophies" value={data.trophies} />
-                        <StatRow label="League" value={data.currentPathOfLegendSeasonResult?.leagueNumber || 1} />
-                        <StatRow label="Battle Count" value={data.battleCount} />
-                        <StatRow label="Three Crown Wins" value={data.threeCrownWins} />
-                        <StatRow label="Win Rate" value={`${Math.round((data.wins / (data.wins + data.losses)) * 100)}%`} />
+                        <StatRow label="Trophies" value={statValue(data.trophies)} />
+                        <StatRow label="League" value={statValue(data.currentPathOfLegendSeasonResult?.leagueNumber ?? 1)} />
+                        <StatRow label="Battle Count" value={statValue(data.battleCount)} />
+                        <StatRow label="Three Crown Wins" value={statValue(data.threeCrownWins)} />
+                        <StatRow label="Win Rate" value={winRateLabel(data)} />
                     </>
                 )}
-                {type === 'lol' && (
+                {hasData && type === 'lol' && (
                     <>
-                        <StatRow label="Rank" value={`${data.tier} ${data.rank}`} />
-                        <StatRow label="Wins" value={data.wins} />
-                        <StatRow label="Win Rate" value={`${Math.round((data.wins / (data.wins + data.losses)) * 100)}%`} />
+                        <StatRow label="Rank" value={statValue([str(data.tier), str(data.rank)].filter(Boolean).join(" "))} />
+                        <StatRow label="Wins" value={statValue(data.wins)} />
+                        <StatRow label="Win Rate" value={winRateLabel(data)} />
                     </>
                 )}
             </div>
